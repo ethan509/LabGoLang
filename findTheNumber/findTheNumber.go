@@ -23,7 +23,7 @@ func main() {
 	inputMinNo := 0
 	inputMaxNo := 100
 	for cnt := 10; cnt > 0; cnt-- {
-		fmt.Print("[", cnt, "] enter the number: ")
+		fmt.Print("[chancd:", cnt, "] enter the number: (", inputMinNo, "~", inputMaxNo, ") ")
 		stdin := bufio.NewReader(os.Stdin)
 		inputStr, err := stdin.ReadString('\n')
 		inputStr = strings.TrimSuffix(inputStr, "\r\n")
