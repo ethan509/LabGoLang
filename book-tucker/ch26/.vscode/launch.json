@@ -12,7 +12,7 @@
             "program": "${workspaceFolder}/${workspaceFolderBasename}.go",
             //"args": ["brother", "hamlet.txt" ]
             //"args": ["death", "hamlet.txt" ]
-            "args": ["death", "romeonjuliet.txt" ]
+            "args": ["death", "hamlet.txt", "romeonjuliet.txt" ]
             //"args": ["hamlet" ]
 
         }
