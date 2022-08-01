@@ -10,10 +10,8 @@
             "request": "launch",
             "mode": "debug",
             "program": "${workspaceFolder}/${workspaceFolderBasename}.go",
-            //"args": ["brother", "hamlet.txt" ]
-            //"args": ["death", "hamlet.txt" ]
-            "args": ["death", "hamlet.txt", "romeonjuliet.txt" ]
-            //"args": ["hamlet" ]
+            "env": {},
+            "args": []
 
         }
     ]
