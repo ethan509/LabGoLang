@@ -1,0 +1,6 @@
+go 1.18
+
+use (
+	./exercise/ex_map
+	./exercise/ex_ring
+)

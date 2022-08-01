@@ -1,0 +1,7 @@
+go 1.18
+
+use (
+    "exercise/exercise1"
+    "exercise/exercise5"
+    "exercise/example3"
+)
