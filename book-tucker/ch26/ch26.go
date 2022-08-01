@@ -33,7 +33,7 @@ func readArgs() (string, []string) {
 	return allArgs[0], allArgs[1:]
 }
 
-func SearchingWord(wg *sync.WaitGroup, ch chan FindInfo, findInfos *list.List, findingWord string, fileName string) {
+func SearchingWord(ch chan FindInfo, findingWord string, fileName string) {
 
 	// File Open & Read
 	file, err := os.Open(fileName) // For read access.
@@ -61,24 +61,22 @@ func SearchingWord(wg *sync.WaitGroup, ch chan FindInfo, findInfos *list.List, f
 			lineInfo.Line = line
 
 			lineInfos.PushBack(lineInfo)
-
-			fmt.Printf("[%s]\t%d\t%s\n", fileName, lineInfo.LineNo, lineInfo.Line)
+			//fmt.Printf("[%s]\t%d\t%s\n", fileName, lineInfo.LineNo, lineInfo.Line)
 		}
 		lineNo++
 	}
 	findInfo.lines = lineInfos
 
 	ch <- findInfo
-	findInfos.PushBack(findInfo)
-
-	wg.Done()
 }
 
-func Result(ch chan FindInfo) {
+func Result(wg *sync.WaitGroup, ch chan FindInfo) {
 	for findInfo := range ch {
 		for e := findInfo.lines.Front(); e != nil; e = e.Next() {
 			fmt.Printf("[%s]\t%v\n", findInfo.FileName, e.Value)
 		}
+		fmt.Println("===============================")
+		wg.Done()
 	}
 }
 
@@ -89,14 +87,16 @@ func main() {
 	findingWord, fileNames := readArgs()
 	fmt.Println("Args: ", findingWord, fileNames)
 
-	wg.Add(len(fileNames))
-	ch := make(chan FindInfo)
-	//findInfos := list.New()
+	fileCount := len(fileNames)
+	wg.Add(fileCount)
 
-	Result(ch)
-	// for _, fileName := range fileNames {
-	// 	go SearchingWord(&wg, &ch, findInfos, findingWord, fileName)
-	// }
+	ch := make(chan FindInfo, fileCount)
+
+	for _, fileName := range fileNames {
+		go SearchingWord(ch, findingWord, fileName)
+	}
+
+	go Result(&wg, ch)
+
 	wg.Wait()
-
 }
