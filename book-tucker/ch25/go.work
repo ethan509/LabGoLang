@@ -1,0 +1,6 @@
+go 1.18
+
+use (
+	./example/example07
+	./example/example08
+)
