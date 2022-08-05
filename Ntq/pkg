@@ -1,0 +1,21 @@
+package cfg
+
+import "os"
+
+type Configinfo struct {
+	Conf map[string]string
+}
+
+var fileName string = "../info.cfg"
+
+func GetValue(key string) string {
+
+}
+
+func ReadFile() {
+	fi, err := os.Open(fileName)
+	if err != nil {
+		panic(err)
+	}
+	defer fi.Close()
+}
