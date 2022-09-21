@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 )
 
 func getInputFileName() string {
@@ -22,9 +23,9 @@ func getInputFileName() string {
 	inputStr = strings.TrimSuffix(inputStr, "\r")
 
 	path, _ := os.Getwd()
-	fmt.Println(path)
 
 	iputFileName := path + "\\" + inputStr
+	fmt.Printf("File Path:%s\n", iputFileName)
 
 	return iputFileName
 }
@@ -33,8 +34,11 @@ func main() {
 	iputFileName := getInputFileName()
 
 	excelcontroller.Init()
+
+	startTime := time.Now()
 	excelcontroller.ReadExcel(iputFileName)
+	elapsedTime := time.Since(startTime)
 
 	fmt.Printf("Final validated Phone number:%d\n", len(common.ExcelInfos))
-	fmt.Println("-------------------------------------------------------------------------")
+	fmt.Printf("(%.2f)seconds------------------------------------------------------------------\n", elapsedTime.Seconds())
 }
