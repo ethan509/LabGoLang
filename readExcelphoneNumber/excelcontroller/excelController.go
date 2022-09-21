@@ -39,6 +39,13 @@ func Init() {
 	setSheetName(resultFile, common.EMPTY_SHEET_NAME)
 	setSheetName(resultFile, common.DUPLICATE_SHEET_NAME)
 	setSheetName(resultFile, common.VALIDATED_SHEET_NAME)
+	setSheetName(resultFile, common.UN_VALIDATED_SHEET_NAME)
+
+	resultFile.NewSheet(common.ORG_SHEET_NAME)
+	resultFile.NewSheet(common.EMPTY_SHEET_NAME)
+	resultFile.NewSheet(common.DUPLICATE_SHEET_NAME)
+	resultFile.NewSheet(common.VALIDATED_SHEET_NAME)
+	resultFile.NewSheet(common.UN_VALIDATED_SHEET_NAME)
 }
 
 func setSheetName(resultFile *excelize.File, sheetName string) {
@@ -67,14 +74,17 @@ func SaveExcel() {
 
 // orig 소스 파일에 대해, 중복 & 번호가 없는 것을 제외한 모든 정보 가져옴
 func ReadExcel(orgFileName string) {
-	//stringutil.PrintEnterFunc()
+	stringutil.PrintEnterFunc()
 
+	var titleRow int
+	var weiredCount int
 	var emptycount int
 	var dupCount int
 
 	var emptyList []common.ExcelInfo      // 번호 없는 정보
 	var duplicatedList []common.ExcelInfo // 중복 번호
 	var validatedNumberList []common.ExcelInfo
+	var unValidatedNumberList []common.ExcelInfo // 검증통과 못한 번호 리스트
 
 	orgExcelFile, err := excelize.OpenFile(orgFileName)
 	if err != nil {
@@ -84,9 +94,12 @@ func ReadExcel(orgFileName string) {
 	// TODO : sheet name은 나중에 param으로 받을 것! 단, 입력 없을 경우 default로 'Sheet1' 사용
 	readRows := orgExcelFile.GetRows("Sheet1")
 
+	totalCount := 0
 	for rowNum, row := range readRows {
+		totalCount++
 		var excelInfo common.ExcelInfo
 		if rowNum == 0 {
+			titleRow++
 			continue
 		}
 
@@ -112,10 +125,13 @@ func ReadExcel(orgFileName string) {
 		}
 		excelInfo.ExcelIndex = rowNum + 1
 
+		// validation check & replace number
 		isValidated := setNewPhoneNumber(&excelInfo)
 
 		if len(excelInfo.NewPhoneNumber) == 0 {
-			WriteOneRowExcelSheet(common.ORG_SHEET_NAME, excelInfo, rowNum)
+			weiredCount++
+			unValidatedNumberList = append(unValidatedNumberList, excelInfo)
+
 			continue
 		}
 
@@ -132,6 +148,10 @@ func ReadExcel(orgFileName string) {
 				common.ExcelInfos[excelInfo.NewPhoneNumber] = excelInfo
 				validatedNumberList = append(validatedNumberList, excelInfo)
 				WriteOneRowExcelSheet(common.ORG_SHEET_NAME, excelInfo, rowNum)
+			} else {
+				weiredCount++
+				unValidatedNumberList = append(unValidatedNumberList, excelInfo)
+				//fmt.Printf("weired(%s/%s)\n", excelInfo.PhoneNumber, excelInfo.NewPhoneNumber)
 			}
 		}
 	}
@@ -145,10 +165,14 @@ func ReadExcel(orgFileName string) {
 	utils.Sort(validatedNumberList)
 	WriteExcelSheet(common.VALIDATED_SHEET_NAME, validatedNumberList)
 
+	utils.Sort(unValidatedNumberList)
+	WriteExcelSheet(common.UN_VALIDATED_SHEET_NAME, unValidatedNumberList)
+
 	SaveExcel()
 
-	fmt.Printf("All count(%d) = (saved:%d) + duplicated(%d) + empty(%d)\n",
-		len(common.ExcelInfos)+dupCount+emptycount, len(common.ExcelInfos), dupCount, emptycount)
+	fmt.Printf("All count(%d/%d) = saved(%d) + duplicated(%d) + unValidated(%d) + empty(%d) + titleRow(%d)\n",
+		len(common.ExcelInfos)+dupCount+emptycount+titleRow+weiredCount,
+		totalCount, len(common.ExcelInfos), dupCount, weiredCount, emptycount, titleRow)
 	fmt.Println("-------------------------------------------------------------------------")
 }
 
@@ -174,7 +198,15 @@ func setNewPhoneNumber(excelInfo *common.ExcelInfo) bool {
 		utils.SetDesc(excelInfo, "dash")
 	}
 
-	//step6-1. [key change] "10"으로 시작하는 번호 -> "010" 으로 변경
+	//step3. [un-validated] // 숫자이외의 번호가 포함된 번호
+	regExpincludingStr := regexp.MustCompile(`[^0-9]`)
+	if regExpincludingStr.Match([]byte(checkingNumber)) {
+		utils.SetDesc(excelInfo, "string")
+		//fmt.Printf("[^0-9](%s)\n", excelInfo.PhoneNumber)
+		return false
+	}
+
+	//step4-1. [key change] "10"으로 시작하는 번호 -> "010" 으로 변경
 	regExpStart10ChgString := "010"
 	regExpStart10 := regexp.MustCompile(`^10`) // "10"으로 시작하는 번호
 	newKey, isChanged = changeByRegexp(regExpStart10, checkingNumber, regExpStart10ChgString /*, &change010Cnt*/)
@@ -184,7 +216,7 @@ func setNewPhoneNumber(excelInfo *common.ExcelInfo) bool {
 		utils.SetDesc(excelInfo, "10")
 	}
 
-	//step6-2. [key change] "11"으로 시작하는 번호 -> "011" 으로 변경
+	//step4-2. [key change] "11"으로 시작하는 번호 -> "011" 으로 변경
 	regExpStart11ChgString := "011"
 	regExpStart11 := regexp.MustCompile(`^11`) // "11"으로 시작하는 번호
 	newKey, isChanged = changeByRegexp(regExpStart11, checkingNumber, regExpStart11ChgString /*, &change011Cnt*/)
@@ -195,7 +227,7 @@ func setNewPhoneNumber(excelInfo *common.ExcelInfo) bool {
 		//fmt.Printf("011(%s)\n", excelInfo.NewPhoneNumber)
 	}
 
-	//step6-3. [key change] "16"으로 시작하는 번호 -> "016" 으로 변경
+	//step4-3. [key change] "16"으로 시작하는 번호 -> "016" 으로 변경
 	//var change016Cnt int
 	regExpStart16ChgString := "016"
 	regExpStart16 := regexp.MustCompile(`^16`) // "16"으로 시작하는 번호
@@ -207,7 +239,7 @@ func setNewPhoneNumber(excelInfo *common.ExcelInfo) bool {
 		//fmt.Printf("016(%s)\n", excelInfo.NewPhoneNumber)
 	}
 
-	//step6-4. [key change] "17"으로 시작하는 번호 -> "017" 으로 변경
+	//step4-4. [key change] "17"으로 시작하는 번호 -> "017" 으로 변경
 	//var change017Cnt int
 	regExpStart17ChgString := "017"
 	regExpStart17 := regexp.MustCompile(`^17`) // "17"으로 시작하는 번호
@@ -219,7 +251,7 @@ func setNewPhoneNumber(excelInfo *common.ExcelInfo) bool {
 		//fmt.Printf("017(%s)\n", excelInfo.NewPhoneNumber)
 	}
 
-	//step6-5. [key change] "18"으로 시작하는 번호 -> "018" 으로 변경
+	//step4-5. [key change] "18"으로 시작하는 번호 -> "018" 으로 변경
 	//var change018Cnt int
 	regExpStart18ChgString := "018"
 	regExpStart18 := regexp.MustCompile(`^18`) // "18"으로 시작하는 번호
@@ -231,7 +263,7 @@ func setNewPhoneNumber(excelInfo *common.ExcelInfo) bool {
 		//fmt.Printf("018(%s)\n", excelInfo.NewPhoneNumber)
 	}
 
-	//step6-6. [key change] "19"으로 시작하는 번호 -> "019" 으로 변경
+	//step4-6. [key change] "19"으로 시작하는 번호 -> "019" 으로 변경
 	//var change019Cnt int
 	regExpStart19ChgString := "019"
 	regExpStart19 := regexp.MustCompile(`^19`) // "19"으로 시작하는 번호
@@ -243,7 +275,7 @@ func setNewPhoneNumber(excelInfo *common.ExcelInfo) bool {
 		//fmt.Printf("019(%s)\n", excelInfo.NewPhoneNumber)
 	}
 
-	//step6-7. [key change] "70"으로 시작하는 번호 -> "070" 으로 변경
+	//step4-7. [key change] "70"으로 시작하는 번호 -> "070" 으로 변경
 	//var change070Cnt int
 	regExpStart70ChgString := "070"
 	regExpStart70 := regexp.MustCompile(`^70`) // "70"으로 시작하는 번호
@@ -255,7 +287,7 @@ func setNewPhoneNumber(excelInfo *common.ExcelInfo) bool {
 		//fmt.Printf("70(%s)\n", excelInfo.NewPhoneNumber)
 	}
 
-	// step3. [delete] 최소길이 미만 skip
+	// step5. [delete] 최소길이 미만 skip
 	if len(checkingNumber) < common.MIN_PHONE_NUMBER_LENGTH {
 		utils.SetDesc(excelInfo, "min")
 		//lessLenCnt++
@@ -263,7 +295,7 @@ func setNewPhoneNumber(excelInfo *common.ExcelInfo) bool {
 		return false
 	}
 
-	// step4. [delete] 최대길이 초과 skip
+	// step6. [delete] 최대길이 초과 skip
 	if len(checkingNumber) > common.MAX_PHONE_NUMBER_LENGTH {
 		//overLenCnt++
 		//fmt.Printf("MaxLen(%4d)(%s)\n", len(checkingNumber), checkingNumber)
@@ -280,7 +312,7 @@ func setNewPhoneNumber(excelInfo *common.ExcelInfo) bool {
 		return false
 	}
 
-	// step7. [delete] "01" 로 시작하지 않는 번호(ex: 031, 032 등 지역번호)
+	// step8. [delete] "01" 로 시작하지 않는 번호(ex: 031, 032 등 지역번호)
 	regExpNotStart01X := regexp.MustCompile(`^0[^17]`) // "01" 로 시작하지 않는 번호(ex: 031, 032 등 지역번호)
 	if regExpNotStart01X.Match([]byte(checkingNumber)) {
 		//notMobileCnt++
@@ -289,7 +321,7 @@ func setNewPhoneNumber(excelInfo *common.ExcelInfo) bool {
 		return false
 	}
 
-	//step2. [key change] "-" 제거
+	//step9. [key change] "0000000" 제거
 	if strings.Contains(checkingNumber, "0000000") {
 		utils.SetDesc(excelInfo, "notMobile")
 		return false
@@ -343,16 +375,15 @@ func WriteOneRowExcelSheet(sheetName string, excelInfo common.ExcelInfo, rowIdx 
 func WriteExcelSheet(sheetName string, list []common.ExcelInfo) {
 	var excelInfo common.ExcelInfo
 
-	idx := 2 // idx=1 은 제목열 index
 	for i := 0; i < len(list); i++ {
 		excelInfo = list[i]
 
-		cellNameA := "A" + strconv.Itoa(idx)
-		cellNameB := "B" + strconv.Itoa(idx)
-		cellNameC := "C" + strconv.Itoa(idx)
-		cellNameD := "D" + strconv.Itoa(idx)
-		cellNameE := "E" + strconv.Itoa(idx)
-		cellNameF := "F" + strconv.Itoa(idx)
+		cellNameA := "A" + strconv.Itoa(i+1)
+		cellNameB := "B" + strconv.Itoa(i+1)
+		cellNameC := "C" + strconv.Itoa(i+1)
+		cellNameD := "D" + strconv.Itoa(i+1)
+		cellNameE := "E" + strconv.Itoa(i+1)
+		cellNameF := "F" + strconv.Itoa(i+1)
 
 		resultFile.SetCellValue(sheetName, cellNameA, excelInfo.ExcelIndex)
 		resultFile.SetCellValue(sheetName, cellNameB, excelInfo.Name)
@@ -360,7 +391,6 @@ func WriteExcelSheet(sheetName string, list []common.ExcelInfo) {
 		resultFile.SetCellValue(sheetName, cellNameD, excelInfo.Locate)
 		resultFile.SetCellValue(sheetName, cellNameE, excelInfo.NewPhoneNumber)
 		resultFile.SetCellValue(sheetName, cellNameF, excelInfo.Desc)
-		idx++
 	}
 }
 

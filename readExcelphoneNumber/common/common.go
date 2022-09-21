@@ -8,6 +8,7 @@ var ORG_SHEET_NAME = "org"
 var EMPTY_SHEET_NAME = "empty"
 var DUPLICATE_SHEET_NAME = "dup"
 var VALIDATED_SHEET_NAME = "validated"
+var UN_VALIDATED_SHEET_NAME = "un-validated"
 
 type ExcelInfo struct {
 	Name        string
