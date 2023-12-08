@@ -1,48 +1,23 @@
 package main
 
 import (
+	"common"
 	"encoding/xml"
 	"fmt"
-	"io/ioutil"
+	"io"
+	"mongo"
 	"net/http"
+	"strconv"
 )
 
-type Response struct {
-	XMLName xml.Name `xml:"response"`
-	Text    string   `xml:",chardata"`
-	Header  struct {
-		Text       string `xml:",chardata"`
-		ResultCode string `xml:"resultCode"`
-		ResultMsg  string `xml:"resultMsg"`
-	} `xml:"header"`
-	Body struct {
-		Text  string `xml:",chardata"`
-		Items struct {
-			Text string `xml:",chardata"`
-			Item []struct {
-				Text         string `xml:",chardata"`
-				Career       string `xml:"career"`       // 진로 및 전망
-				EngJmNm      string `xml:"engJmNm"`      // 자격영문명
-				Hist         string `xml:"hist"`         // 변천과정
-				ImplNm       string `xml:"implNm"`       // 시행기관
-				InstiNm      string `xml:"instiNm"`      // 관련부처
-				JmNm         string `xml:"jmNm"`         // 자격명
-				Job          string `xml:"job"`          // 수행직무
-				MdobligFldNm string `xml:"mdobligFldNm"` // 직종
-				SeriesNm     string `xml:"seriesNm"`     // 자격등급
-				Summary      string `xml:"summary"`      // 개요
-				Trend        string `xml:"trend"`        // 출제경향
-			} `xml:"item"`
-		} `xml:"items"`
-	} `xml:"body"`
-}
-
-func main() {
-	url := "http://testapi.q-net.or.kr/api/service/rest/InquiryQualInfo/"
+func GetInfo(seriesCd int) ([]byte, error) {
+	url := "http://openapi.q-net.or.kr/api/service/rest/InquiryQualInfo/"
 	urlCmd := "getList?"
 	urlServiceKey := "serviceKey=tzOBycybN9XChfAO%2Fbx%2BG0aY3OrfyYq4zUowu2HUJYTiaeEl%2FiISOuNXmFMBxB%2Bj1d6VKXswysBzLaewj1WzQg%3D%3D"
-	urlSeriesCd := "&seriesCd=01"
+	// urlSeriesCd : (계열코드) 01:기술사, 02:기능장, 03:기사, 04:기능사
+	urlSeriesCd := "&seriesCd=0" + strconv.Itoa(seriesCd)
 	urlAllIncluded := url + urlCmd + urlServiceKey + urlSeriesCd
+
 	fmt.Println("urlAllIncluded =", urlAllIncluded)
 
 	resp, err := http.Get(urlAllIncluded)
@@ -52,19 +27,48 @@ func main() {
 	defer resp.Body.Close()
 
 	// 결과 출력
-	data, err := ioutil.ReadAll(resp.Body)
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		panic(err)
+		//panic(err)
+
 	}
 
-	var response Response
-	err = xml.Unmarshal(data, &response)
-	if err != nil {
-		panic(err)
-	}
+	return data, err
+}
 
-	for i, item := range response.Body.Items.Item {
-		fmt.Printf("[%d]%s\n", i, item.JmNm)
+func main() {
+	mongo.DbClient = mongo.MongoConn()
+
+	for i := 1; i <= 4; i++ {
+		data, _ := GetInfo(i)
+
+		var response common.Response
+		err := xml.Unmarshal(data, &response)
+		if err != nil {
+			panic(err)
+		}
+
+		var mongoItems []interface{}
+		for i, item := range response.Body.Items.Item {
+			fmt.Printf("[%d]%s\t", i, item.JmNm)
+			var mongoItem common.MongoItem
+
+			mongoItem.Career = item.Career
+			mongoItem.EngJmNm = item.Career
+			mongoItem.Hist = item.Hist
+			mongoItem.ImplNm = item.ImplNm
+			mongoItem.InstiNm = item.InstiNm
+			mongoItem.JmNm = item.JmNm
+			mongoItem.Job = item.Job
+			mongoItem.MdobligFldNm = item.MdobligFldNm
+			mongoItem.SeriesNm = item.SeriesNm
+			mongoItem.Summary = item.Summary
+			mongoItem.Trend = item.Trend
+
+			mongoItems = append(mongoItems, mongoItem)
+			//mongo.MongoInsertOne(mongoItem)
+		}
+
+		mongo.MongoInsertMany(mongoItems)
 	}
-	//fmt.Println(response)
 }
