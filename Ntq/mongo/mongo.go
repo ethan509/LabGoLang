@@ -65,7 +65,7 @@ func MongoInsertMany(items []interface{}) {
 
 	result, err := coll.InsertMany(context.TODO(), items)
 	if err != nil {
-		fmt.Println("db insert error")
+		fmt.Println("db insert error (", err.Error(), ")")
 		return
 	}
 
