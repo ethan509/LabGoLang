@@ -14,7 +14,11 @@ func getSeriesCode(code common.Serise, wg *sync.WaitGroup) {
 	defer wg.Done()
 	//fmt.Printf("[%d] go start of %s\n", code, code)
 
+	startApi := time.Now()
+	time.Sleep(time.Second)
+
 	data, _ := api.GetSeriseCode(int(code))
+	endApi := time.Since(startApi)
 
 	var response common.Response
 	err := xml.Unmarshal(data, &response)
@@ -44,11 +48,19 @@ func getSeriesCode(code common.Serise, wg *sync.WaitGroup) {
 	}
 
 	var insertedCount int
+	var endDb time.Duration
 	if len(mongoItems) > 0 {
+		startDb := time.Now()
+		time.Sleep(time.Second)
 		insertedCount = mongo.InsertMany(mongoItems)
-	}
+		endDb = time.Since(startDb)
 
-	fmt.Printf("[%02d]%-4s API Search result: %3v, insertedCount: %3d\n", code, code, len(mongoItems), insertedCount)
+		fmt.Printf("[%02d]%-4s API Search result: %3v, insertedCount: %3d, apiTime:%v, dbTime:%v, %v\n",
+			code, code, len(mongoItems), insertedCount, endApi.Milliseconds(), endDb.Milliseconds(), endApi.Milliseconds()/endDb.Milliseconds())
+	} else {
+		fmt.Printf("[%02d]%-4s API Search result: %3v, insertedCount: %3d, apiTime:%v, dbTime:%v\n",
+			code, code, len(mongoItems), insertedCount, endApi.Milliseconds(), endDb.Milliseconds())
+	}
 
 	//fmt.Printf("[%d] go end of %s\n", code, code)
 }
