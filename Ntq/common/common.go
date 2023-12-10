@@ -17,11 +17,11 @@ const (
 func (code Serise) String() string {
 	var codes = [...]string{
 		"BeginSeriseCode",
-		"ProfessionalEngineers",
-		"MasterCraftsment",
-		"Engineers",
-		"IndustrialEngineers",
-		"Technicians",
+		"기술사",
+		"기능장",
+		"기사",
+		"산업기사",
+		"기능사",
 		"EndSeriseCode",
 	}
 

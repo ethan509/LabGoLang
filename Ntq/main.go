@@ -1,40 +1,56 @@
 package main
 
 import (
+	"api"
 	"common"
 	"encoding/xml"
 	"fmt"
-	"io"
 	"mongo"
-	"net/http"
-	"strconv"
 	"sync"
 	"time"
 )
 
-func GetInfo(seriesCd int) ([]byte, error) {
-	url := "http://openapi.q-net.or.kr/api/service/rest/InquiryQualInfo/"
-	urlCmd := "getList?"
-	urlServiceKey := "serviceKey=tzOBycybN9XChfAO%2Fbx%2BG0aY3OrfyYq4zUowu2HUJYTiaeEl%2FiISOuNXmFMBxB%2Bj1d6VKXswysBzLaewj1WzQg%3D%3D"
-	urlSeriesCd := "&seriesCd=0" + strconv.Itoa(seriesCd)
-	urlAllIncluded := url + urlCmd + urlServiceKey + urlSeriesCd
+func getSeriesCode(code common.Serise, wg *sync.WaitGroup) {
+	defer wg.Done()
+	//fmt.Printf("[%d] go start of %s\n", code, code)
 
-	//fmt.Println("urlAllIncluded =", urlAllIncluded)
+	data, _ := api.GetSeriseCode(int(code))
 
-	resp, err := http.Get(urlAllIncluded)
+	var response common.Response
+	err := xml.Unmarshal(data, &response)
 	if err != nil {
 		panic(err)
 	}
-	defer resp.Body.Close()
 
-	// 결과 출력
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		//panic(err)
+	var mongoItems []interface{}
+	for i, item := range response.Body.Items.Item {
+		fmt.Printf("[%d]%s\t", i, item.JmNm)
+		var mongoItem common.MongoItem
 
+		mongoItem.Career = item.Career
+		mongoItem.EngJmNm = item.Career
+		mongoItem.Hist = item.Hist
+		mongoItem.ImplNm = item.ImplNm
+		mongoItem.InstiNm = item.InstiNm
+		mongoItem.JmNm = item.JmNm
+		mongoItem.Job = item.Job
+		mongoItem.MdobligFldNm = item.MdobligFldNm
+		mongoItem.SeriesNm = item.SeriesNm
+		mongoItem.Summary = item.Summary
+		mongoItem.Trend = item.Trend
+
+		mongoItems = append(mongoItems, mongoItem)
+		//mongo.MongoInsertOne(mongoItem)
 	}
 
-	return data, err
+	var insertedCount int
+	if len(mongoItems) > 0 {
+		insertedCount = mongo.InsertMany(mongoItems)
+	}
+
+	fmt.Printf("[%02d]%-4s API Search result: %3v, insertedCount: %3d\n", code, code, len(mongoItems), insertedCount)
+
+	//fmt.Printf("[%d] go end of %s\n", code, code)
 }
 
 func getSeriesCode(code common.Serise, wg *sync.WaitGroup) {
@@ -79,7 +95,7 @@ func getSeriesCode(code common.Serise, wg *sync.WaitGroup) {
 }
 
 func main() {
-	mongo.DbClient = mongo.MongoConn()
+	mongo.DbClient = mongo.Connect()
 
 	var wg sync.WaitGroup
 

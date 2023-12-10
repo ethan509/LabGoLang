@@ -60,13 +60,16 @@ func MongoInsertOne(item common.MongoItem) {
 	fmt.Printf("Inserted document with _id: %v\n", result.InsertedID)
 }
 
-func MongoInsertMany(items []interface{}) {
-	coll := DbClient.Database("go-project").Collection("certification")
+func InsertMany(items []interface{}) int {
+	const databaseName string = "go-project"
+	const collectionName string = "certification"
+
+	coll := DbClient.Database(databaseName).Collection(collectionName)
 
 	result, err := coll.InsertMany(context.TODO(), items)
 	if err != nil {
 		fmt.Println("db insert error (", err.Error(), ")")
-		return
+		log.Fatal(err)
 	}
 
 	list_ids := result.InsertedIDs
