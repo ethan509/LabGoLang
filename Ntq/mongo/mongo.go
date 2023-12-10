@@ -21,7 +21,7 @@ var DbClient *mongo.Client
 // 	time     string `bson:"time"`
 // }
 
-func MongoConn() *mongo.Client {
+func Connect() *mongo.Client {
 
 	if DbClient != nil {
 		return DbClient
