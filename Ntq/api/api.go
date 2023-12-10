@@ -12,7 +12,6 @@ func getSeriseCodeUrl(seriesCd int) string {
 
 	const SUB_CMD_GETLIST string = "getList"
 	const VN_SERVICEKEY string = "serviceKey" // variable name serviceKey
-	const VN_GETLIST string = "getList"       // variable name getList
 	const VN_SERISECD string = "seriesCd"     // variable name seriesCd
 
 	urlSeriesCd := "0" + strconv.Itoa(seriesCd)
@@ -36,8 +35,7 @@ func GetSeriseCode(seriesCd int) ([]byte, error) {
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		//panic(err)
-
+		panic(err)
 	}
 
 	return data, err

@@ -14,6 +14,8 @@ import (
 
 var DbClient *mongo.Client
 
+const MONGO_URI string = "mongodb://localhost:27017"
+
 // type logEntity struct {
 // 	logType  string `bson:"logType"`
 // 	logValue string `bson:"logValue"`
@@ -32,7 +34,7 @@ func Connect() *mongo.Client {
 	// 	Password: "<PASSWORD>",
 	// }
 	// clientOptions := options.Client().ApplyURI("mongodb://localhost:27017").SetAuth(credential)
-	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+	clientOptions := options.Client().ApplyURI(MONGO_URI)
 	DbClient, err := mongo.Connect(context.TODO(), clientOptions)
 	if err != nil {
 		log.Fatal(err)
@@ -48,7 +50,7 @@ func Connect() *mongo.Client {
 	return DbClient
 }
 
-func MongoInsertOne(item common.MongoItem) {
+func InsertOne(item common.MongoItem) {
 	coll := DbClient.Database("go-project").Collection("certification")
 
 	result, err := coll.InsertOne(context.TODO(), item)
@@ -72,6 +74,7 @@ func InsertMany(items []interface{}) int {
 		log.Fatal(err)
 	}
 
-	list_ids := result.InsertedIDs
-	fmt.Printf("Documents inserted: %v\n", len(list_ids))
+	// list_ids := result.InsertedIDs
+	// fmt.Printf("Documents inserted: %v\n", len(list_ids))
+	return len(result.InsertedIDs)
 }
