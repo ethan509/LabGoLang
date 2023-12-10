@@ -2,6 +2,32 @@ package common
 
 import "encoding/xml"
 
+type Serise int
+
+const (
+	BeginSeriseCode       int = iota
+	ProfessionalEngineers     // 기술사
+	MasterCraftsment          // 기능장
+	Engineers                 // 기사
+	IndustrialEngineers       // 산업기사
+	Technicians               // 기능사
+	EndSeriseCode
+)
+
+func (code Serise) String() string {
+	var codes = [...]string{
+		"BeginSeriseCode",
+		"기술사",
+		"기능장",
+		"기사",
+		"산업기사",
+		"기능사",
+		"EndSeriseCode",
+	}
+
+	return codes[int(code)%len(codes)]
+}
+
 // https://www.data.go.kr/data/15041600/openapi.do?recommendDataYn=Y
 type Response struct {
 	XMLName xml.Name `xml:"response"`
