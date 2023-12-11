@@ -9,23 +9,19 @@ const (
 	ProfessionalEngineers     // 기술사
 	MasterCraftsment          // 기능장
 	Engineers                 // 기사
-	IndustrialEngineers       // 산업기사
 	Technicians               // 기능사
 	EndSeriseCode
 )
 
+// 01:기술사, 02:기능장, 03:기사, 04:기능사
 func (code Serise) String() string {
-	var codes = [...]string{
+	return [...]string{
 		"BeginSeriseCode",
 		"기술사",
 		"기능장",
 		"기사",
-		"산업기사",
 		"기능사",
-		"EndSeriseCode",
-	}
-
-	return codes[int(code)%len(codes)]
+		"EndSeriseCode"}[code]
 }
 
 // https://www.data.go.kr/data/15041600/openapi.do?recommendDataYn=Y
